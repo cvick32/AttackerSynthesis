@@ -1,0 +1,92 @@
+RUNNING SPIN
+
+If you are using embedded C code, you cannot use iSpin.
+To run Spin from the command line interface (CLI):
+spin -a file.pml
+gcc -o pan pan.c
+./pan
+
+Other options for gcc above (-o etc. comes last)
+-m64  needed on pharos
+-DSAFETY  optimizes if there are only safety checks
+-DCOLLAPSE  good, fast compression
+            is this irrelevant with supertrace?
+-DBITSTATE  supertrace
+-DMEMLIN=200  sets true upper bound of allocation to 200 megabytes,
+              ignored with supertrace
+
+Other options for ./pan above:
+-mX  where X is the maximum depth for depth-first search (if this option
+     is not used, X is set to 10,000)
+-a   must use if you are checking a never claim
+-wX  used only for supertrace; default X is 23; raising it uses more
+     memory and improves the hash factor
+-kX  chooses the number of hash functions; default is 3
+> report &  runs in background, while sending messages to report
+
+If pan produces an error trail, can view it with:
+./pan -r > trace
+
+TESTING AND DEBUGGING AN EMBEDDED C PROGRAM
+
+To run a test program with its own main():
+gcc file.c
+./a.out
+
+To run the test program with a debugger:
+gcc -g file.c
+gdb a.out
+   See man gdb for options.  Important but undocumented: "break n" sets a
+   breakpoint just before executing line n.
+
+PRINTING FROM AN EMBEDDED C PROGRAM
+
+Embedded C code can be run from ispin, but print output will be bizarre
+because it follows search order, not trace order.
+
+To get print output in trace order, use "Printf" instead of "printf" in C
+code, run spin from the CLI, and use ./pan -r to see the error trail with
+print output.
+   So, the only way to see print is to force an error if there is no
+   natural one, use Printf, and run from the CLI.
+
+REFERENCE MATERIAL
+
+http://spinroot.com/spin/Man
+
+CHECKING A TEMPORAL PROPERTY THAT IS PARTLY DEFINED IN C
+
+Is it possible to check a temporal property that is partly defined in
+C code?  For example, I might want to check the property 
+   "(<> [] pacific) -> (<> [] perfect)" 
+where
+   #define pacific churnStopped && ! busyWait
+   #define perfect c_expr{ ideal( now.succ, now.prdc, now.succ2) }
+
+1) Put the #define statements somewhere near the top of spec.pml.
+
+2) Generate the never claim with:
+   spin -f '(<> [] pacific) && ! (<> [] perfect)' > never_pq.pml
+   Remember that this must be the negation of the desired temporal 
+   assertion!
+
+3) Put at the bottom of spec.pml: 
+   #include "never_pq.pml" 
+ 
+4) Use the -a option with ./pan . 
+
+Or, newer version, not yet tested:
+
+you add the line;
+
+ltl correct { (<>[]pacific) -> (<>[]perfect) }; 
+
+to your model -- somewhere below the point where 'pacific' and 'perfect' were defined.
+(you don't have to negate this -- spin does it behind the screen)
+
+WARNINGS
+
+Diagnostic messages from the Promela syntax checker are bad.
+ * Be careful to distinguish == (equality) from = (assignment).
+
+You cannot trust the reports of unreached code.
