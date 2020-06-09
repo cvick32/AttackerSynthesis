@@ -20,17 +20,20 @@ c_code {
 \#include "chord_incorrect.c"
 }
 
-int succ[S] = 9;
-int prdc[S] = 9;
-int succ2[S] = 9;
+int nonMember = 9; // arbitrary int standing in as non-member-ness
+
+// initialize everything has nonMembers
+int succ[S] = nonMember; 
+int prdc[S] = nonMember;
+int succ2[S] = nonMember;
 int x, y, z;                     /* used for passing arguments to C code */
 
 inline joinAttempt(j,m) {        /* assumes j is not a member and j != m */
    if
-   :: succ[m] != 9 ->                              /* m must be a member */
-      x = m; y = j; z = succ[m];        /* checking between(m,j,succ[m]) */
+   :: succ[m] != nonMember ->                              /* m must be a member */
+      x = m; y = j; z = succ[m];        /* checking between(m,j,succ[m])  makes sure that the joining node is between the current node and its successor*/ 
       if
-      :: c_expr{ between(now.x, now.y, now.z) } && succ[succ[m]] != 9 -> 
+      :: c_expr{ between(now.x, now.y, now.z) } && succ[succ[m]] != nonMember -> // succ[succ[m]] != nonMember means the successor of m's successor is a member
          succ[j] = succ[m];
          succ2[j] = succ[succ[m]];
          assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
@@ -40,21 +43,27 @@ inline joinAttempt(j,m) {        /* assumes j is not a member and j != m */
    fi
 }
 
+/*
+"when a member stabilizes it learns its succerssor's predecessor. 
+it adopts the new predecessor as its new successor, provided
+that the predecessor is closer in identifier order than the current 
+sucessor"
+*/
 inline stabilize(s) {                           /* assumes s is a member */
-   int newSucc;
-   newSucc = prdc[succ[s]];
-
+   int newSuccForS;
+   newSuccForS = prdc[succ[s]];
+   
    atomic {
       if
-      :: newSucc != 9 ->           /* s's successor must have a predecessor */
+      :: newSuccForS != nonMember ->           /* s's successor must have a predecessor */
          if
-         :: succ[newSucc] != 9 ->           /* predecessor must be a member */
-            x = s; y = newSucc; z = succ[s];
+         :: succ[newSuccForS] != nonMember ->           /* predecessor must be a member */
+            x = s; y = newSuccForS; z = succ[s];
             if                 /* checking between(s,prdc[succ[s]],succ[s]) */
             :: c_expr { between(now.x, now.y, now.z) } ->
-               succ[s] = newSucc;
+               succ[s] = newSuccForS;
                if 
-               :: succ2[s] != succ[newSucc] -> succ2[s] = succ[newSucc];
+               :: succ2[s] != succ[newSuccForS] -> succ2[s] = succ[newSuccForS];
                :: else
                fi;
                assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
@@ -69,12 +78,12 @@ inline stabilize(s) {                           /* assumes s is a member */
 
 inline notified(t,p) { 
    if
-   :: succ[t] != 9 ->                     /* notified t must be a member */
+   :: succ[t] != nonMember ->                     /* notified t must be a member */
       if
-      :: prdc[t] == 9 -> 
+      :: prdc[t] == nonMember -> 
          prdc[t] = p;
          assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
-      :: prdc[t] != 9 ->
+      :: prdc[t] != nonMember ->
          x = prdc[t]; y = p; z = t;     /* checking between(prdc[t],p,t) */
          if
          :: c_expr{ between(now.x, now.y, now.z) } ->
@@ -91,7 +100,7 @@ inline failAttempt(f) {                         /* assumes f is a member */
    x = f;
    if
    :: c_expr { canFailNow( now.x, now.succ, now.prdc, now.succ2 ) } ->
-      succ[f] = 9; prdc[f] = 9; succ2[f] = 9;
+      succ[f] = nonMember; prdc[f] = nonMember; succ2[f] = nonMember;
       assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
    :: else
    fi
@@ -99,9 +108,9 @@ inline failAttempt(f) {                         /* assumes f is a member */
 
 inline reconcile(r) {                          
    if
-   :: succ[r] != 9 ->                              /* r must be a member */
+   :: succ[r] != nonMember ->                              /* r must be a member */
       if 
-      :: succ[succ[r]] != 9 && succ2[r] != succ[succ[r]] -> 
+      :: succ[succ[r]] != nonMember && succ2[r] != succ[succ[r]] -> 
          succ2[r] = succ[succ[r]];
          assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
       :: else
@@ -112,10 +121,10 @@ inline reconcile(r) {
 
 inline update(u) {                              /* assumes u is a member */
    if
-   :: succ[succ[u]] == 9 && succ2[u] != 9 -> 
-      succ[u] = succ2[u]; succ2[u] = 9;
+   :: succ[succ[u]] == nonMember && succ2[u] != nonMember -> 
+      succ[u] = succ2[u]; succ2[u] = nonMember;
       if 
-      :: succ[succ[u]] != 9 && succ2[u] != succ[succ[u]] -> 
+      :: succ[succ[u]] != nonMember && succ2[u] != succ[succ[u]] -> 
          succ2[u] = succ[succ[u]]
       :: else
       fi;
@@ -126,10 +135,10 @@ inline update(u) {                              /* assumes u is a member */
 
 inline flush(f) { 
    if 
-   :: prdc[f] != 9 ->                       /* f must have a predecessor */
+   :: prdc[f] != nonMember ->                       /* f must have a predecessor */
       if
-      :: succ[prdc[f]] == 9 -> 
-         prdc[f] = 9;
+      :: succ[prdc[f]] == nonMember -> 
+         prdc[f] = nonMember;
          assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
       :: else
       fi
@@ -139,31 +148,31 @@ inline flush(f) {
 
 proctype node (byte n) {
 
-   if /* there must be an initial member; 2 is an "arbitrary" choice */
-   :: n == 2 ->
-      succ[n] = 2; assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
+   if /* there must be an initial member; 1 is an "arbitrary" choice */
+   :: n == 1 ->
+      succ[n] = 1; assert c_expr{ valid( now.succ, now.prdc, now.succ2) }
    :: else
    fi;
 
    do
-   :: succ[n] == 9 && n != 0 -> atomic { joinAttempt(n,0) }
-   :: succ[n] == 9 && n != 1 -> atomic { joinAttempt(n,1) }
-   :: succ[n] == 9 && n != 2 -> atomic { joinAttempt(n,2) }
-   :: succ[n] == 9 && n != 3 -> atomic { joinAttempt(n,3) }
-   :: succ[n] != 9 -> stabilize(n);                    
+   :: succ[n] == nonMember && n != 0 -> atomic { joinAttempt(n,0) }
+   :: succ[n] == nonMember && n != 1 -> atomic { joinAttempt(n,1) }
+   :: succ[n] == nonMember && n != 2 -> atomic { joinAttempt(n,2) }
+   :: succ[n] == nonMember && n != 3 -> atomic { joinAttempt(n,3) }
+   :: succ[n] != nonMember -> stabilize(n);                    
                       atomic { notified(succ[n],n) } 
-   :: succ[n] != 9 -> atomic { failAttempt(n) }
+   :: succ[n] != nonMember -> atomic { failAttempt(n) }
        /* can fail if and only if no node is left with no live successor */
-   :: succ[n] != 9 -> atomic { reconcile(n) } 
-   :: succ[n] != 9 -> atomic { update(n) }  
-   :: succ[n] != 9 -> atomic { flush(n) } 
+   :: succ[n] != nonMember -> atomic { reconcile(n) } 
+   :: succ[n] != nonMember -> atomic { update(n) }  
+   :: succ[n] != nonMember -> atomic { flush(n) } 
    od;
 }
 
 init { atomic { run node(0);
                 run node(1);
                 run node(2);
-                run node(3)
+                run node(3);
               } }
 
 /* ========================================================================
