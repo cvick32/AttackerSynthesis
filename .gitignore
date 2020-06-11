@@ -1,8 +1,7 @@
 # This .gitignore mostly taken from:
 # https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
 
-# Promela stuff
-*.pml
+
 # Outputs
 out/*
 # Results
@@ -184,3 +183,4 @@ logs/*
 .vscode/*
 *.trail
 pan
+pan.*

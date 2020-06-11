@@ -1,0 +1,1 @@
+ltl correct { (<>[]churnStopped) -> (<>[]perfect) }

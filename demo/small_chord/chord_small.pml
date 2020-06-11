@@ -9,10 +9,13 @@ members of size n+1, where n is the length of the successor list.
 ======================================================================== */
 
 #define S 3
+#define churnStopped churn;
+#define perfect c_expr{ ideal( now.succ, now.prdc, now.succ2)}
 
 c_code {
 \#include "chordbase.c"
 }
+
 
 int succ[S] = 9;
 int prdc[S] = 9;
@@ -138,9 +141,8 @@ inline flush(f) {
 }
 
 proctype node (byte n) {
-
    do
-  // :: true -> churn = true;
+   :: true -> churn = true;
    :: (n == 0) && succ[n] == 9 -> 
          atomic { joinCheck(n,1); } atomic { join(n,1); reconcile(n) }
    :: (n == 0) && succ[n] == 9 -> 
