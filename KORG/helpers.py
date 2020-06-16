@@ -1,4 +1,5 @@
 import os
+from glob import glob
 
 
 def negate_claim(phi):
@@ -6,7 +7,7 @@ def negate_claim(phi):
 	Given a path to a given LTL specificiationm, phi, negate
 	phi and write it to a file called "negated.pml".
 	"""
-    contents = fileRead(phi)
+    contents = file_read(phi)
     if contents == None or contents == False:
         return False
     negated = False
@@ -19,46 +20,25 @@ def negate_claim(phi):
     return negated
 
 
-def file_read(fileName):
-    try:
-        txt = None
-        with open(fileName, "r") as fr:
-            txt = fr.read()
-        return txt
-    except Exception:
-        return False
-
-
-def coalesce(model, phi, N, name):
+def coalesce(file_list, name):
     """
-	Given the paths to a model and a property, puts them all 
+	Given a list of paths to a model and a property, puts them all 
 	into one runnable promela file.
 	INPUT:
-		model - the string containing the path to the model file
-		phi   - the string containing the path to the ltl model file
-		N     - the string containing the path to the N model file
+		file_list: list of strings with paths to promela files
 	OUTPUTS:
 		a string that is the path to a file where the contents of the 
 		arguments has been dumped to a single file
 	"""
-    fmrLines = ""
-    fNrLines = ""
-    fprLines = ""
-
-    with open(model, "r") as fmr:
-        fmrLines = fmr.read()
-
-    with open(N, "r") as fNr:
-        fNrLines = fNr.read()
-
-    with open(phi, "r") as fpr:
-        fprLines = fpr.read()
+    final_content = ""
+    for promela_file in file_list:
+        with open(promela_file, "r") as f:
+            final_content += f.read()
+            final_content += "\n"
 
     with open(name, "w") as fw:
-        fw.write(fmrLines + "\n" + fNrLines + "\n" + fprLines)
-
+        fw.write(final_content)
     assert os.path.isfile(name)
-
     return name
 
 
@@ -117,3 +97,32 @@ def inner_contents(singleModelBody):
     if i >= j or singleModelBody[i] != "{" or singleModelBody[j] != "}":
         return None
     return singleModelBody[i + 1 : j]
+
+
+def file_write(path, contents):
+    with open(path, "w") as fw:
+        fw.write(contents)
+
+
+def file_read(fileName):
+    try:
+        txt = None
+        with open(fileName, "r") as fr:
+            txt = fr.read()
+        return txt
+    except Exception:
+        return False
+
+
+def clean_up_targeted(target):
+    files = glob(target)
+    for file in files:
+        os.remove(file)
+
+
+def clean_up():
+    clean_up_targeted("*.trail")
+    clean_up_targeted("*tmp*")
+    clean_up_targeted("pan")
+    clean_up_targeted("*.pml")
+    clean_up_targeted("._n_i_p_s_")
