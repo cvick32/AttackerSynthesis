@@ -3,18 +3,8 @@ from glob import glob
 import os
 import sys
 from problem import Problem
-from helpers import negate_claim, coalesce, get_IO
-
-
-def str_to_bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ("yes", "true", "t", "y", "1"):
-        return True
-    elif v.lower() in ("no", "false", "f", "n", "0"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected.")
+from helpers import negate_claim, coalesce, get_IO, clean_up
+from spin import run_spin
 
 
 def parse_args():
@@ -47,54 +37,6 @@ def parse_args():
     )
 
 
-trails = lambda: glob("*.trail")
-
-
-def clean_up_targeted(target):
-    files = glob(target)
-    for file in files:
-        os.remove(file)
-
-
-def clean_up():
-    clean_up_targeted("*.trail")
-    clean_up_targeted("*tmp*")
-    clean_up_targeted("pan")
-    clean_up_targeted("*.pml")
-    clean_up_targeted("._n_i_p_s_")
-
-
-def add_trail_number_to_args(args, num):
-    ret = []
-    for arg in args:
-        if arg != "-t":
-            ret.append(arg)
-        else:
-            ret.append(arg + str(num))
-    return ret
-
-
-def handleTs(args, name):
-    args = args.split(" ")
-    num = len(glob(name + "*.trail"))
-    if num == 0:
-        return []
-    elif num == 1:
-        return [args]
-    else:
-        return [add_trail_number_to_args(args, i) for i in range(0, num)]
-
-
-def trail_parse_CMDs(tmpName):
-    args = "spin -t -s -r " + tmpName
-    return handleTs(args, tmpName)
-
-
-def clean_and_exit():
-    clean_up()
-    exit(1)
-
-
 def check_args(args):
     """
 	Checks some semantic assumptions on our arguments
@@ -109,7 +51,8 @@ def check_args(args):
         clean_and_exit()
 
     # Check validity: Does model || Q |= phi?
-    if not coalesce(args.P, args.phi, args.Q, args.name + "_model_Q_phi.pml"):
+    full_model = coalesce([args.P, args.phi, args.Q], args.name + "_model_Q_phi.pml")
+    if not run_spin(full_model):
         print_invalid_inputs(args.P, args.phi, args.Q)
         clean_and_exit()
 
@@ -132,12 +75,6 @@ def print_invalid_inputs(model, phi, N):
     )
 
 
-# Error message for if we cannot find any solution.
-def print_no_solution(model, phi, N, with_recovery):
-    possiblyFinite = "with_recovery" if with_recovery else ""
-    print("We could not find any " + possiblyFinite + "(model, (N), phi)-attacker A.")
-
-
 # Error message when we could not negate the claim phi.
 def print_could_not_negate_claim(phi):
     if phi == None:
@@ -154,6 +91,22 @@ def print_zero_IO(IO):
 # Error message when num is too small
 def print_invalid_num(num):
     print("--num option must be > 0, was: " + str(num) + "; giving up.")
+
+
+def clean_and_exit():
+    clean_up()
+    exit(1)
+
+
+def str_to_bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
 def initialize_parser():
